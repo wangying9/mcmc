@@ -5,14 +5,29 @@ ls()
 rm(list=ls())
 gc()
 
-logprior <- function(beta) {
+#======   define functions   ======
+logprior = function(beta) {
   p = 1
   for(j in 1 : length(beta)) {
     p = p * dnorm(beta[j],0, 0.00001)
   }
-  
   #p = dmvnorm(beta, u, sigma)
   return(p)
+}
+
+logLikelihood = function(beta, x, y) {
+  H = nrow(y)
+  J = ncol(y)
+  likelihood = 0.0
+  for (j in 1 : J) {
+    for (h in 1 : H) {
+      z = sum(beta[j,] * x[h,])
+      p = exp(z) / (1.0 + exp(z))
+      likelihoodSample = log(p) * y[h, j] + log(1.0 - p) * (1.0 - y[h, j])
+      likelihood = likelihood + likelihoodSample
+    }
+  }
+  return(likelihood)
 }
 
 #======   prepare data   ======
@@ -85,16 +100,22 @@ if (loadData == "MockData") {
 }
 
 #======   sampling beta   ======
+nSamples = 500 # the length of the MCMC samples
 sigmaProposal = 0.05;
 init = seq(0.5, xCols)/1.0
 betaCurr = array(0, dim=c(yCols, xCols)) 
 betaNew = array(0, dim=c(yCols, xCols)) 
+betaPosteriorCurr = array(0, dim=c(yCols, xCols)) 
+betaPosteriorNew = array(0, dim=c(yCols, xCols)) 
 for (j in 1 : yCols) {
   betaCurr[j,] = init
   betaNew[j,] = init
+  betaPosteriorCurr[j,] = init
+  betaPosteriorNew[j,] = init
 }
-nSamples = 500 # the length of the MCMC samples
-betaSamples =array(0, dim=c(nSamples, yCols, xCols)) 
+betaSamplesLikelihood = array(0, dim=c(nSamples, yCols, xCols)) 
+betaSamplesPosterior = array(0, dim=c(nSamples, yCols, xCols)) 
+
 for (i in 1 : nSamples)
 {
   if (i %% 50 ==0){
@@ -104,22 +125,10 @@ for (i in 1 : nSamples)
   for (j in 1 : yCols) {
     for (k in 1 : xCols)
     {
-      temp1 = betaCurr[j, k] + sigmaProposal * rnorm(1, mean = 0, sd = 1)
-      betaNew[j, k] = temp1;
-      logLikelihoodNew = 0.0
-      logLikelihoodCurr = 0.0
-      for (h in 1 : nRecord)
-      {
-        zNew = sum(betaNew[j,] * x[h,])
-        pNew = exp(zNew) / (1.0 + exp(zNew))
-        logLikelihoodSampleNew = log(pNew) * y[h, j] + log(1.0 - pNew) * (1.0 - y[h, j])
-        logLikelihoodNew = logLikelihoodNew + logLikelihoodSampleNew
-        
-        zCurr = sum(betaCurr[j,] * x[h,])
-        pCurr = exp(zCurr) / (1.0 + exp(zCurr))
-        logLikelihoodSampleCurr = log(pCurr) * y[h, j] + log(1.0 - pCurr) * (1.0 - y[h, j])
-        logLikelihoodCurr = logLikelihoodCurr + logLikelihoodSampleCurr
-      }
+      #sample liklihood
+      betaNew[j, k] = betaCurr[j, k] + sigmaProposal * rnorm(1, mean = 0, sd = 1)
+      logLikelihoodNew = logLikelihood(betaNew, x, y)
+      logLikelihoodCurr = logLikelihood(betaCurr, x, y)
       logAlpha = logLikelihoodNew - logLikelihoodCurr
       alpha = exp(logAlpha)
       u = runif(1, min = 0, max = 1);
@@ -127,16 +136,28 @@ for (i in 1 : nSamples)
       {
         betaCurr[j, k]=betaNew[j, k];
       }
+      #sample posterior
+      betaPosteriorNew[j, k] = betaPosteriorCurr[j, k] + sigmaProposal * rnorm(1, mean = 0, sd = 1)
+      logPosteriorNew = logLikelihood(betaNew, x, y) + logprior(betaNew)
+      logPosteriorCurr = logLikelihood(betaCurr, x, y) + logprior(betaCurr)
+      logAlphaPosterior = logPosteriorNew - logPosteriorCurr
+      alphaPosterior = exp(logAlphaPosterior)
+      u = runif(1, min = 0, max = 1);
+      if ( u < min(1.0, alphaPosterior))
+      {
+        betaPosteriorCurr[j, k]=betaPosteriorNew[j, k];
+      }
     }
   }
-  betaSamples[i,,] = betaCurr
+  betaSamplesLikelihood[i,,] = betaCurr
+  betaSamplesPosterior[i,,] = betaCurr
 }
 
 #======   display beta samples   ======
-b0a = betaSamples[, 1, 1]
+b0a = betaSamplesLikelihood[, 1, 1]
 plot(b0a, type = "l")
-burnin = 500
-b0=b0a[burnin:m]
+burnin = 100
+b0=b0a[burnin : nSamples]
 h<-hist(b0,breaks=15, freq=FALSE)
 lines(density(b0))
 
