@@ -15,10 +15,10 @@ logprior <- function(beta) {
   return(p)
 }
 
-#generate data
-loadData = TRUE
+#load data
+loadData = "MockData"
 idx = 0
-if (loadData) {
+if (loadData == "MockData") {
   dataDF = read.csv(file="mockData.txt",head=TRUE,sep=",")
   colNames = colnames(dataDF)
   for (i in 1 : length(colNames)) {
@@ -40,6 +40,8 @@ if (loadData) {
   for (k in 1 : xCols) {
     x[,k] = data[, k+yCols]
   }
+} else if (loadData == "MyData") {
+  
 } else {
   xCols = 4
   yCols = 2
