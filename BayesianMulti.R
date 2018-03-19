@@ -100,7 +100,7 @@ if (loadData == "MockData") {
 }
 
 #======   sampling beta   ======
-nSamples = 500 # the length of the MCMC samples
+nSamples = 5000 # the length of the MCMC samples
 sigmaProposal = 0.05;
 init = seq(0.5, xCols)/1.0
 betaCurr = array(0, dim=c(yCols, xCols)) 
@@ -154,6 +154,11 @@ for (i in 1 : nSamples)
 }
 
 #======   display beta samples   ======
+#saveRDS(betaSamplesLikelihood, file="betaSamplesLikelihood.Rds")
+#saveRDS(betaSamplesPosterior, file="betaSamplesPosterior.Rds")
+#betaSamplesLikelihood = readRDS("betaSamplesLikelihood.Rds")
+#betaSamplesPosterior = readRDS("betaSamplesPosterior.Rds")
+
 b0a = betaSamplesLikelihood[, 1, 1]
 plot(b0a, type = "l")
 burnin = 100
