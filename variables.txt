@@ -1,0 +1,4 @@
+Wealth,Religion,Marital St,Sup Soc,Thin Risk
+
+Blood test,Heard,H_Comp
+
