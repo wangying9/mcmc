@@ -187,7 +187,7 @@ if (loadData == "MockData") {
       # trace
       beta = betaSamplesLikelihood[, j, k]
       traceTitle = sprintf("Trace of beta%i%i for likelihood", j, k)
-      fName = paste(traceTitle, ".png", sep="")
+      fName = paste("output/", traceTitle, ".png", sep="")
       png(filename = fName)
       plot(beta, type = "l")
       title(traceTitle)
@@ -196,7 +196,7 @@ if (loadData == "MockData") {
       burnin = 500
       beta=beta[burnin : nSamples]
       histTitle = sprintf("Histogram of beta%i%i for likelihood", j, k)
-      fName = paste(histTitle, ".png", sep="")
+      fName = paste("output/", histTitle, ".png", sep="")
       png(filename = fName)
       h<-hist(beta,breaks=15, freq=FALSE, main = NULL)
       lines(density(beta))
@@ -210,7 +210,7 @@ if (loadData == "MockData") {
       # trace
       beta = betaSamplesPosterior[, j, k]
       traceTitle = sprintf("Trace of beta%i%i for posterior", j, k)
-      fName = paste(traceTitle, ".png", sep="")
+      fName = paste("output/", traceTitle, ".png", sep="")
       png(filename = fName)
       plot(beta, type = "l")
       title(traceTitle)
@@ -219,7 +219,7 @@ if (loadData == "MockData") {
       burnin = 500
       beta=beta[burnin : nSamples]
       histTitle = sprintf("Histogram of beta%i%i for posterior", j, k)
-      fName = paste(histTitle, ".png", sep="")
+      fName = paste("output/", histTitle, ".png", sep="")
       png(filename = fName)
       h<-hist(beta,breaks=15, freq=FALSE, main = NULL)
       lines(density(beta))
