@@ -100,38 +100,40 @@ for (i in 1 : nSamples)
   if (i %% 50 ==0){
     print(i)
   }
-  for (k in 1 : xCols)
-  {
-    temp1=betaCurr[k] +sigma2*rnorm(1, mean = 0, sd = 1)
-    betaNew[k]=temp1;
-    logLikelihood=0.0;
-    for (h in 1:rows)
+
+  for (j in 1 : yCols) {
+    for (k in 1 : xCols)
     {
-      temp_new=betaNew[1] +betaNew[2]*x1[h] +betaNew[3]*x2[h]+betaNew[4]*x3[h];
-      temp_new=exp(temp_new);
-      temp_curr=betaCurr[1] +betaCurr[2]*x1[h] +betaCurr[3]*x2[h]+betaCurr[4]*x3[h];
-      temp_curr=exp(temp_curr);
-      logLikelihood=logLikelihood+ log( temp_new /(1.0 +temp_new))*y[h];
-      logLikelihood=logLikelihood+ log(1.0- temp_new /(1.0 +temp_new))*(1.0-y[h]);
-      logLikelihood=logLikelihood- log(temp_curr /(1.0 +temp_curr))*y[h];
-      logLikelihood=logLikelihood- log(1.0- temp_curr /(1.0 +temp_curr))*(1.0-y[h]);
-    }
-    
-    logLikelihood=logLikelihood + logprior(temp_new)
-    logLikelihood=logLikelihood - logprior(temp_curr)
-    u=runif(1, min = 0, max = 1);
-    if ( u<min(1.0, exp(logLikelihood)))
-    {
-      betaCurr[k]=betaNew[k];
+      temp1 = betaCurr[j, k] + sigmaProposal * rnorm(1, mean = 0, sd = 1)
+      betaNew[j, k] = temp1;
+      logLikelihoodNew = 0.0
+      logLikelihoodCurr = 0.0
+      for (h in 1 : nRecord)
+      {
+        zNew = sum(betaNew[j,] * x[h,])
+        pNew = exp(zNew) / (1.0 + exp(zNew))
+        logLikelihoodSampleNew = log(pNew) * y[h, j] + log(1.0 - pNew) * (1.0 - y[h, j])
+        logLikelihoodNew = logLikelihoodNew + logLikelihoodSampleNew
+        
+        zCurr = sum(betaCurr[j,] * x[h,])
+        pCurr = exp(zCurr) / (1.0 + exp(zCurr))
+        logLikelihoodSampleCurr = log(pCurr) * y[h, j] + log(1.0 - pCurr) * (1.0 - y[h, j])
+        logLikelihoodCurr = logLikelihoodCurr + logLikelihoodSampleCurr
+      }
+      logAlpha = logLikelihoodNew - logLikelihoodCurr
+      alpha = exp(logAlpha)
+      u = runif(1, min = 0, max = 1);
+      if ( u < min(1.0, alpha))
+      {
+        betaCurr[j, k]=betaNew[j, k];
+      }
     }
   }
-  betaSamples[i,] = betaCurr
-  d1 <- data.frame(logLikelihood, t(betaCurr))
-
+  betaSamples[i,,] = betaCurr
 }
 
 #======   display beta samples   ======
-b0a = betaSamples[,1]
+b0a = betaSamples[, 1, 1]
 plot(b0a, type = "l")
 burnin = 500
 b0=b0a[burnin:m]
