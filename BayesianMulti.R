@@ -249,6 +249,7 @@ if (loadData != "MyData") {
       
       dataDensity = data.frame(cond, beta = c(betaPrior, betaLk, betaPost))
       sm.density.compare(dataDensity$beta, dataDensity$cond)
+      legend("topright", levels(dataDensity$cond), fill=2+(0:nlevels(dataDensity$cond)))
       title(compareTitle)
       dev.off()
 
