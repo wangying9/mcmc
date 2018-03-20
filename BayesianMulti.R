@@ -180,64 +180,89 @@ for (i in 1 : nSamples) {
 #betaSamplesLikelihood = readRDS("betaSamplesLikelihood.Rds")
 #betaSamplesPosterior = readRDS("betaSamplesPosterior.Rds")
 
-if (loadData == "MockData") {
-  for (j in 1 : yCols) {
-    for (k in 1 : xCols) {
-      #display likelihood estimation
-      # trace
-      beta = betaSamplesLikelihood[, j, k]
-      traceTitle = sprintf("Trace of beta%i%i for likelihood", j, k)
-      fName = paste("output/", traceTitle, ".png", sep="")
-      png(filename = fName)
-      plot(beta, type = "l")
-      title(traceTitle)
-      dev.off()
-      # histogram
-      burnin = 500
-      beta=beta[burnin : nSamples]
-      histTitle = sprintf("Histogram of beta%i%i for likelihood", j, k)
-      fName = paste("output/", histTitle, ".png", sep="")
-      png(filename = fName)
-      h<-hist(beta,breaks=15, freq=FALSE, main = NULL)
-      lines(density(beta))
-      title(histTitle)
-      dev.off()
-      idx = which.is.max(h$density)
-      bMLK = h$mids[idx]
-      estimate = sprintf("MLK estimation of beta%i%i is %f;", j, k, bMLK)
-      print(estimate)
-      #display posterior estimation
-      # trace
-      beta = betaSamplesPosterior[, j, k]
-      traceTitle = sprintf("Trace of beta%i%i for posterior", j, k)
-      fName = paste("output/", traceTitle, ".png", sep="")
-      png(filename = fName)
-      plot(beta, type = "l")
-      title(traceTitle)
-      dev.off()
-      # histogram
-      burnin = 500
-      beta=beta[burnin : nSamples]
-      histTitle = sprintf("Histogram of beta%i%i for posterior", j, k)
-      fName = paste("output/", histTitle, ".png", sep="")
-      png(filename = fName)
-      h<-hist(beta,breaks=15, freq=FALSE, main = NULL)
-      lines(density(beta))
-      title(histTitle)
-      dev.off()
-      idx = which.is.max(h$density)
-      bMAP = h$mids[idx]
-      estimate = sprintf("MAP estimation of beta%i%i is %f;", j, k, bMLK)
-      print(estimate)
-    }
+burnin = 500
+for (j in 1 : yCols) {
+  for (k in 1 : xCols) {
+    #display likelihood estimation
+    # trace
+    beta = betaSamplesLikelihood[, j, k]
+    traceTitle = sprintf("Trace of beta%i%i for likelihood", j, k)
+    fName = paste("output/", traceTitle, ".png", sep="")
+    png(filename = fName)
+    plot(beta, type = "l")
+    title(traceTitle)
+    dev.off()
+    # histogram
+    beta = beta[burnin : nSamples]
+    histTitle = sprintf("Histogram of beta%i%i for likelihood", j, k)
+    fName = paste("output/", histTitle, ".png", sep="")
+    png(filename = fName)
+    h<-hist(beta, breaks = 15, freq = FALSE, main = NULL)
+    lines(density(beta))
+    title(histTitle)
+    dev.off()
+    idx = which.is.max(h$density)
+    bMLK = h$mids[idx]
+    estimate = sprintf("MLK estimation of beta%i%i is %f;", j, k, bMLK)
+    print(estimate)
+    #display posterior estimation
+    # trace
+    beta = betaSamplesPosterior[, j, k]
+    traceTitle = sprintf("Trace of beta%i%i for posterior", j, k)
+    fName = paste("output/", traceTitle, ".png", sep="")
+    png(filename = fName)
+    plot(beta, type = "l")
+    title(traceTitle)
+    dev.off()
+    # histogram
+    beta = beta[burnin : nSamples]
+    histTitle = sprintf("Histogram of beta%i%i for posterior", j, k)
+    fName = paste("output/", histTitle, ".png", sep="")
+    png(filename = fName)
+    h = hist(beta, breaks = 15, freq = FALSE, main = NULL)
+    lines(density(beta))
+    title(histTitle)
+    dev.off()
+    idx = which.is.max(h$density)
+    bMAP = h$mids[idx]
+    estimate = sprintf("MAP estimation of beta%i%i is %f;", j, k, bMAP)
+    print(estimate)
   }
-} else {
-  
 }
 
+#overlay prior, likelihood and posterior
+if (loadData != "MockData") {
+  for (j in 1 : yCols) {
+    for (k in 1 : xCols) {
+      compareTitle = sprintf("Compare of beta%i%i for prior, likelihood and posterior", j, k)
+      fName = paste("output/", compareTitle, ".png", sep="")
+      png(filename = fName)
+      betaLk = betaSamplesLikelihood[, j, k]
+      betaLk = betaLk[burnin : nSamples]
 
+      betaPost = betaSamplesPosterior[, j, k]
+      betaPost = betaPost[burnin : nSamples]
 
+      lines(density(betaLk), col="red")
+      lines(density(betaPost), col="blue")
+      title(compareTitle)
+      dev.off()
 
+    }
+  }
+}
+
+betaLk = betaSamplesLikelihood[, 1, 1]
+betaLk = betaLk[burnin : nSamples]
+
+betaPost = betaSamplesPosterior[, 1, 1]
+betaPost = betaPost[burnin : nSamples]
+m = nSamples - burnin + 1
+cond = factor( rep(c("A", "B"), each = m) )
+
+dataDensity = data.frame(cond, beta = c(betaLk,betaPost))
+sm.density.compare(dataDensity$beta, dataDensity$cond)
+dev.off()
 
 
 
