@@ -9,13 +9,13 @@ gc()
 #======   define functions   ======
 sigmaPrior = 0.01
 logPrior = function(beta, uPrior) {
-  p = 1
+  logp = 0
   for(j in 1 : nrow(uPrior)) {
     for(k in 1 : ncol(uPrior)) {
-      p = p * dnorm(beta[j, k], uPrior[j,k], sigmaPrior)
+      logp = logp + dnorm(beta[j, k], uPrior[j,k], sigmaPrior)
     }
   }
-  return(p)
+  return(logp)
 }
 
 logLikelihood = function(beta, x, y) {
@@ -115,7 +115,7 @@ if (loadData == "MockData") {
   }
   data = cbind(y, x)
   write.table(data, file = "mockData.txt", sep = ",", row.names = FALSE, col.names = colNames)
-  write.table(u, file = "mockDataPrior.txt", sep = ",", row.names = FALSE, col.names = FALSE)
+  write.table(uPrior, file = "mockDataPrior.txt", sep = ",", row.names = FALSE, col.names = FALSE)
 }
 
 #======   sampling beta   ======
@@ -150,8 +150,8 @@ for (i in 1 : nSamples) {
       logAlpha = logLikelihoodNew - logLikelihoodCurr
       alpha = exp(logAlpha)
       u = runif(1, min = 0, max = 1);
-      if ( u < min(1.0, alpha)) {
-        betaCurr[j, k]=betaNew[j, k];
+      if (u < min(1.0, alpha)) {
+        betaCurr[j, k] = betaNew[j, k];
       }
       #sample posterior
       betaPosNew[j, k] = betaPosCurr[j, k] + sigmaProposal * rnorm(1, mean = 0, sd = 1)
@@ -165,8 +165,8 @@ for (i in 1 : nSamples) {
       logAlphaPosterior = logPosteriorNew - logPosteriorCurr
       alphaPosterior = exp(logAlphaPosterior)
       u = runif(1, min = 0, max = 1);
-      if ( u < min(1.0, alphaPosterior)) {
-        betaPosCurr[j, k]=betaPosNew[j, k];
+      if (u < min(1.0, alphaPosterior)) {
+        betaPosCurr[j, k] = betaPosNew[j, k];
       }
     }
   }
@@ -177,8 +177,8 @@ for (i in 1 : nSamples) {
 #======   display beta samples   ======
 #saveRDS(betaSamplesLikelihood, file="betaSamplesLikelihood.Rds")
 #saveRDS(betaSamplesPosterior, file="betaSamplesPosterior.Rds")
-#betaSamplesLikelihood = readRDS("betaSamplesLikelihood.Rds")
-#betaSamplesPosterior = readRDS("betaSamplesPosterior.Rds")
+betaSamplesLikelihood = readRDS("betaSamplesLikelihood.Rds")
+betaSamplesPosterior = readRDS("betaSamplesPosterior.Rds")
 
 burnin = 500
 for (j in 1 : yCols) {
@@ -231,7 +231,8 @@ for (j in 1 : yCols) {
 }
 
 #overlay prior, likelihood and posterior
-if (loadData != "MockData") {
+m = nSamples - burnin + 1
+if (loadData != "MyData") {
   for (j in 1 : yCols) {
     for (k in 1 : xCols) {
       compareTitle = sprintf("Compare of beta%i%i for prior, likelihood and posterior", j, k)
@@ -242,29 +243,15 @@ if (loadData != "MockData") {
 
       betaPost = betaSamplesPosterior[, j, k]
       betaPost = betaPost[burnin : nSamples]
-
-      lines(density(betaLk), col="red")
-      lines(density(betaPost), col="blue")
+      
+      betaPrior = rnorm(m, uPrior, sigmaPrior)
+      cond = factor( rep(c("Prior", "Likelihood", "Posterior"), each = m) )
+      
+      dataDensity = data.frame(cond, beta = c(betaPrior, betaLk, betaPost))
+      sm.density.compare(dataDensity$beta, dataDensity$cond)
       title(compareTitle)
       dev.off()
 
     }
   }
 }
-
-betaLk = betaSamplesLikelihood[, 1, 1]
-betaLk = betaLk[burnin : nSamples]
-
-betaPost = betaSamplesPosterior[, 1, 1]
-betaPost = betaPost[burnin : nSamples]
-m = nSamples - burnin + 1
-cond = factor( rep(c("A", "B"), each = m) )
-
-dataDensity = data.frame(cond, beta = c(betaLk,betaPost))
-sm.density.compare(dataDensity$beta, dataDensity$cond)
-dev.off()
-
-
-
- 
- 
