@@ -5,6 +5,9 @@
 ls()
 rm(list=ls())
 gc()
+library(statip)
+library(nnet)
+library(sm)
 
 #======   define functions   ======
 sigmaPrior = 0.01
@@ -12,7 +15,7 @@ logPrior = function(beta, uPrior) {
   logp = 0
   for(j in 1 : nrow(uPrior)) {
     for(k in 1 : ncol(uPrior)) {
-      logp = logp + dnorm(beta[j, k], uPrior[j,k], sigmaPrior)
+      logp = logp + log(dnorm(beta[j, k], uPrior[j,k], sigmaPrior))
     }
   }
   return(logp)
@@ -41,7 +44,7 @@ logLikelihood = function(beta, x, y) {
 }
 
 #======   prepare data   ======
-loadData = "MockData" # or "MyData" 
+loadData = "MockData1" # or "MyData" 
 if (loadData == "MockData") {
   dataDF = read.csv(file="mockData.txt",head=FALSE,sep=",")
   xCols = 4
@@ -77,22 +80,22 @@ if (loadData == "MockData") {
   yLevel = 2 ^ yCols
   betaTrue = array(0, dim=c(yLevel, xCols))
   uPrior = array(0, dim=c(yLevel, xCols)) 
-  uPrior[1,1] = 1
-  uPrior[1,2] = 2
-  uPrior[1,3] = 3
-  uPrior[1,4] = 4
-  uPrior[2,1] = 6
-  uPrior[2,2] = 7
-  uPrior[2,3] = 5
-  uPrior[2,4] = 3
-  uPrior[3,1] = 1
-  uPrior[3,2] = 2
-  uPrior[3,3] = 3
-  uPrior[3,4] = 4
-  uPrior[4,1] = 6
-  uPrior[4,2] = 7
-  uPrior[4,3] = 5
-  uPrior[4,4] = 3
+  uPrior[1,1] = 1.0
+  uPrior[1,2] = 2.0
+  uPrior[1,3] = 3.0
+  uPrior[1,4] = 4.0
+  uPrior[2,1] = 1.2
+  uPrior[2,2] = 2.2
+  uPrior[2,3] = 3.2
+  uPrior[2,4] = 4.2
+  uPrior[3,1] = 1.4
+  uPrior[3,2] = 2.4
+  uPrior[3,3] = 3.4
+  uPrior[3,4] = 4.4
+  uPrior[4,1] = 1.6
+  uPrior[4,2] = 2.6
+  uPrior[4,3] = 3.6
+  uPrior[4,4] = 4.6
   for (j in 1 : yLevel) {
     for (k in 1 : xCols) {
       betaTrue[j, k] = rnorm(1, uPrior[j,k], sigmaPrior)
@@ -122,6 +125,7 @@ if (loadData == "MockData") {
   data = cbind(y, x)
   write.table(data, file = "mockData.txt", sep = ",", row.names = FALSE, col.names = FALSE)
   write.table(uPrior, file = "mockDataPrior.txt", sep = ",", row.names = FALSE, col.names = FALSE)
+  write.table(betaTrue, file = "mockDataPriorTrue.txt", sep = ",", row.names = FALSE, col.names = FALSE)
 }
 
 #======   sampling beta   ======
@@ -238,6 +242,7 @@ for (j in 1 : yLevel) {
 
 #overlay prior, likelihood and posterior
 m = nSamples - burnin + 1
+n0 = rnorm(m, 0, sigmaPrior)
 if (loadData != "MyData") {
   for (j in 1 : yLevel) {
     for (k in 1 : xCols) {
@@ -250,17 +255,19 @@ if (loadData != "MyData") {
       betaPost = betaSamplesPosterior[, j, k]
       betaPost = betaPost[burnin : nSamples]
       
-      betaPrior = rnorm(m, uPrior[j, k], sigmaPrior)
+      betaPrior = n0 + uPrior[j, k]# + 0.1
       cond = factor( rep(c("Prior", "Likelihood", "Posterior"), each = m) )
       
-      dataDensity = data.frame(cond, betac = c(betaPrior, betaPost, betaPrior))
+      dataDensity = data.frame(cond, betac = c(betaPrior, betaLk, betaPost))
       #sm.density.compare(dataDensity$betac, dataDensity$cond)
       dpr = density(betaPrior)
       dlk = density(betaLk)
       dpo = density(betaPost)
       plot(dpr$x,dpr$y,type = "l",col="red")
-      plot(dlk$x,dlk$y,type = "l",col="green")
-      plot(dpo$x,dpo$y,type = "l",col="blue")
+      #par(new=TRUE)
+      lines(dlk$x,dlk$y,col="green")
+      #par(new=TRUE)
+      #plot(dpo$x,dpo$y,type = "l",col="blue",add=TRUE)
       legend("topright", levels(dataDensity$cond), fill=2+(0:nlevels(dataDensity$cond)))
       title(compareTitle)
       dev.off()
