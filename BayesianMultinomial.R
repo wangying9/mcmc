@@ -10,15 +10,17 @@ library(nnet)
 library(sm)
 
 #======   define functions   ======
-sigmaPrior = 0.01
+sigmaPrior = 1
 logPrior = function(beta, uPrior) {
-  logp = 0
+  logpropAccum = 0
   for(j in 1 : nrow(uPrior)) {
     for(k in 1 : ncol(uPrior)) {
-      logp = logp + log(dnorm(beta[j, k], uPrior[j,k], sigmaPrior))
+      prop = dnorm(beta[j, k], uPrior[j,k], sigmaPrior)
+      logprop = log(prop)
+      logpropAccum = logpropAccum + logprop
     }
   }
-  return(logp)
+  return(logpropAccum)
 }
 
 logLikelihood = function(beta, x, y) {
@@ -154,19 +156,19 @@ for (i in 1 : nSamples) {
   for (j in 1 : yLevel) {
     for (k in 1 : xCols) {
       #sample liklihood
-      betaNew[j, k] = betaCurr[j, k] + sigmaProposal * rnorm(1, mean = 0, sd = 1)
+      betaNew[j, k] = rnorm(1, betaCurr[j, k], sigmaProposal)
       logLikelihoodNew = logLikelihood(betaNew, x, y)
       logLikelihoodCurr = logLikelihood(betaCurr, x, y)
       logAlpha = logLikelihoodNew - logLikelihoodCurr
       alpha = exp(logAlpha)
-      u = runif(1, min = 0, max = 1);
+      u = runif(1, min = 0, max = 1)
       if (u < min(1.0, alpha)) {
-        betaCurr[j, k] = betaNew[j, k];
+        betaCurr[j, k] = betaNew[j, k]
       }
       #sample posterior
-      betaPosNew[j, k] = betaPosCurr[j, k] + sigmaProposal * rnorm(1, mean = 0, sd = 1)
+      betaPosNew[j, k] = rnorm(1, betaPosCurr[j, k] , sigmaProposal)
       if (loadData == "MyData") {
-        priorMean = array(0, dim=c(yCols, xCols)) 
+        priorMean = array(0, dim = c(yLevel, xCols)) 
       } else {
         priorMean = uPrior
       }
@@ -174,9 +176,9 @@ for (i in 1 : nSamples) {
       logPosteriorCurr = logLikelihood(betaPosCurr, x, y) + logPrior(betaPosCurr, priorMean)
       logAlphaPosterior = logPosteriorNew - logPosteriorCurr
       alphaPosterior = exp(logAlphaPosterior)
-      u = runif(1, min = 0, max = 1);
+      u = runif(1, min = 0, max = 1)
       if (u < min(1.0, alphaPosterior)) {
-        betaPosCurr[j, k] = betaPosNew[j, k];
+        betaPosCurr[j, k] = betaPosNew[j, k]
       }
     }
   }
