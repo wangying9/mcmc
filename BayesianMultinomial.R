@@ -54,7 +54,7 @@ if (loadData == "MockData") {
   for (k in 1 : xCols) {
     x[, k] = data[, k + 1]
   }
-  uDF = read.csv(file="mockDataPrior.txt",head=TRUE,sep=",")
+  uDF = read.csv(file="mockDataPrior.txt",head=FALSE,sep=",")
   uPrior = data.matrix(uDF)
 } else if (loadData == "MyData") {
   dataDF = read.csv(file="Moz_T.csv",head=TRUE,sep=",")
@@ -181,10 +181,10 @@ for (i in 1 : nSamples) {
 }
 
 #======   display beta samples   ======
-#saveRDS(betaSamplesLikelihood, file="betaSamplesLikelihood.Rds")
-#saveRDS(betaSamplesPosterior, file="betaSamplesPosterior.Rds")
-betaSamplesLikelihood = readRDS("betaSamplesLikelihood.Rds")
-betaSamplesPosterior = readRDS("betaSamplesPosterior.Rds")
+saveRDS(betaSamplesLikelihood, file="betaSamplesLikelihood.Rds")
+saveRDS(betaSamplesPosterior, file="betaSamplesPosterior.Rds")
+#betaSamplesLikelihood = readRDS("betaSamplesLikelihood.Rds")
+#betaSamplesPosterior = readRDS("betaSamplesPosterior.Rds")
 
 burnin = 500
 for (j in 1 : yLevel) {
@@ -250,11 +250,17 @@ if (loadData != "MyData") {
       betaPost = betaSamplesPosterior[, j, k]
       betaPost = betaPost[burnin : nSamples]
       
-      betaPrior = rnorm(m, uPrior, sigmaPrior)
+      betaPrior = rnorm(m, uPrior[j, k], sigmaPrior)
       cond = factor( rep(c("Prior", "Likelihood", "Posterior"), each = m) )
       
-      dataDensity = data.frame(cond, beta = c(betaPrior, betaLk, betaPost))
-      sm.density.compare(dataDensity$beta, dataDensity$cond)
+      dataDensity = data.frame(cond, betac = c(betaPrior, betaPost, betaPrior))
+      #sm.density.compare(dataDensity$betac, dataDensity$cond)
+      dpr = density(betaPrior)
+      dlk = density(betaLk)
+      dpo = density(betaPost)
+      plot(dpr$x,dpr$y,type = "l",col="red")
+      plot(dlk$x,dlk$y,type = "l",col="green")
+      plot(dpo$x,dpo$y,type = "l",col="blue")
       legend("topright", levels(dataDensity$cond), fill=2+(0:nlevels(dataDensity$cond)))
       title(compareTitle)
       dev.off()
