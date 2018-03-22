@@ -146,31 +146,17 @@ for (i in 1 : nSamples) {
     for (k in 1 : xCols) {
       #sample liklihood
       betaNew[j, k] = rnorm(1, betaCurr[j, k], sigmaProposal)
-      logLikelihoodNew = logLikelihood(betaNew, x, y)
-      logLikelihoodCurr = logLikelihood(betaCurr, x, y)
-      logAlpha = logLikelihoodNew - logLikelihoodCurr
-      alpha = exp(logAlpha)
-      #print(alpha)
-      u = runif(1, min = 0, max = 1)
-      if (u < min(1.0, alpha)) {
-        betaCurr[j, k] = betaNew[j, k]
-      }
-      # #sample posterior
-      # betaPosNew[j, k] = rnorm(1, betaPosCurr[j, k] , sigmaProposal)
-      # if (loadData == "MyData") {
-      #   priorMean = array(0, dim = c(yLevel, xCols)) 
-      # } else {
-      #   priorMean = uPrior
-      # }
-      # logPosteriorNew = logLikelihood(betaPosNew, x, y) + logPrior(betaPosNew, priorMean)
-      # logPosteriorCurr = logLikelihood(betaPosCurr, x, y) + logPrior(betaPosCurr, priorMean)
-      # logAlphaPosterior = logPosteriorNew - logPosteriorCurr
-      # alphaPosterior = exp(logAlphaPosterior)
-      # u = runif(1, min = 0, max = 1)
-      # if (u < min(1.0, alphaPosterior)) {
-      #   betaPosCurr[j, k] = betaPosNew[j, k]
-      # }
+
     }
+  }
+  logLikelihoodNew = logLikelihood(betaNew, x, y)
+  logLikelihoodCurr = logLikelihood(betaCurr, x, y)
+  logAlpha = logLikelihoodNew - logLikelihoodCurr
+  alpha = exp(logAlpha)
+  #print(alpha)
+  u = runif(1, min = 0, max = 1)
+  if (u < min(1.0, alpha)) {
+    betaCurr = betaNew
   }
   betaSamplesLikelihood[i,,] = betaCurr
 #  betaSamplesPosterior[i,,] = betaPosCurr
