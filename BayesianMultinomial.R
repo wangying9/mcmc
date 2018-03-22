@@ -100,46 +100,39 @@ if (loadData == "MockData") {
       betaTrue[j, k] = rnorm(1, uPrior[j,k], sigmaPrior)
     }
   }
-  nRecord = 100
+  nRecord = 1000
+  ng = nRecord / yLevel
   x = array(1, dim=c(nRecord, xCols)) 
   y = rep(0, nRecord) 
-  for (k in 2 : xCols) {
-    x[,k] = runif(nRecord, -1, 1)
-  }
+
   p = rep(0, yLevel)
-  for (h in 1 : nRecord) {
-    sumez = 0.0
-    for (j in 1 : yLevel) {
-      z = sum(betaTrue[j,] * x[h,])
-      ez = exp(z)
-      sumez = sumez + ez
+  for (j in 1 : yLevel) {
+    r = ((j-1)*ng+1) : (j*ng)
+    for (k in 2 : xCols) {
+      x[r,k] = rnorm(ng, j, 0.1)
     }
-    for (j in 1 : yLevel) {
-      z = sum(betaTrue[j,] * x[h,])
-      p[j] = exp(z) / sumez
-    }
-    y[h] = which.is.max(p)
+    y[r] = j
   }
   data = cbind(y, x)
   write.table(data, file = "mockData.txt", sep = ",", row.names = FALSE, col.names = FALSE)
-  write.table(uPrior, file = "mockDataPrior.txt", sep = ",", row.names = FALSE, col.names = FALSE)
-  write.table(betaTrue, file = "mockDataPriorTrue.txt", sep = ",", row.names = FALSE, col.names = FALSE)
+  #write.table(uPrior, file = "mockDataPrior.txt", sep = ",", row.names = FALSE, col.names = FALSE)
+  #write.table(betaTrue, file = "mockDataPriorTrue.txt", sep = ",", row.names = FALSE, col.names = FALSE)
 }
 
 #======   sampling beta   ======
-nSamples = 2000 # the length of the MCMC samples
-sigmaProposal = 0.05;
+nSamples = 5000 # the length of the MCMC samples
+sigmaProposal = 0.005;
 betaCurr = array(0, dim=c(yLevel, xCols)) 
 betaNew = array(0, dim=c(yLevel, xCols)) 
 betaPosCurr = array(0, dim=c(yLevel, xCols)) 
 betaPosNew = array(0, dim=c(yLevel, xCols))
-init = seq(0.5, xCols)/1.0
-for (j in 1 : yLevel) {
-  betaCurr[j,] = init
-  betaNew[j,] = init
-  betaPosCurr[j,] = init
-  betaPosNew[j,] = init
-}
+# init = seq(0.5, xCols)/1.0
+# for (j in 1 : yLevel) {
+#   betaCurr[j,] = init
+#   betaNew[j,] = init
+#   betaPosCurr[j,] = init
+#   betaPosNew[j,] = init
+# }
 
 betaSamplesLikelihood = array(0, dim=c(nSamples, yLevel, xCols)) 
 betaSamplesPosterior = array(0, dim=c(nSamples, yLevel, xCols)) 
@@ -157,29 +150,30 @@ for (i in 1 : nSamples) {
       logLikelihoodCurr = logLikelihood(betaCurr, x, y)
       logAlpha = logLikelihoodNew - logLikelihoodCurr
       alpha = exp(logAlpha)
+      #print(alpha)
       u = runif(1, min = 0, max = 1)
       if (u < min(1.0, alpha)) {
         betaCurr[j, k] = betaNew[j, k]
       }
-      #sample posterior
-      betaPosNew[j, k] = rnorm(1, betaPosCurr[j, k] , sigmaProposal)
-      if (loadData == "MyData") {
-        priorMean = array(0, dim = c(yLevel, xCols)) 
-      } else {
-        priorMean = uPrior
-      }
-      logPosteriorNew = logLikelihood(betaPosNew, x, y) + logPrior(betaPosNew, priorMean)
-      logPosteriorCurr = logLikelihood(betaPosCurr, x, y) + logPrior(betaPosCurr, priorMean)
-      logAlphaPosterior = logPosteriorNew - logPosteriorCurr
-      alphaPosterior = exp(logAlphaPosterior)
-      u = runif(1, min = 0, max = 1)
-      if (u < min(1.0, alphaPosterior)) {
-        betaPosCurr[j, k] = betaPosNew[j, k]
-      }
+      # #sample posterior
+      # betaPosNew[j, k] = rnorm(1, betaPosCurr[j, k] , sigmaProposal)
+      # if (loadData == "MyData") {
+      #   priorMean = array(0, dim = c(yLevel, xCols)) 
+      # } else {
+      #   priorMean = uPrior
+      # }
+      # logPosteriorNew = logLikelihood(betaPosNew, x, y) + logPrior(betaPosNew, priorMean)
+      # logPosteriorCurr = logLikelihood(betaPosCurr, x, y) + logPrior(betaPosCurr, priorMean)
+      # logAlphaPosterior = logPosteriorNew - logPosteriorCurr
+      # alphaPosterior = exp(logAlphaPosterior)
+      # u = runif(1, min = 0, max = 1)
+      # if (u < min(1.0, alphaPosterior)) {
+      #   betaPosCurr[j, k] = betaPosNew[j, k]
+      # }
     }
   }
   betaSamplesLikelihood[i,,] = betaCurr
-  betaSamplesPosterior[i,,] = betaPosCurr
+#  betaSamplesPosterior[i,,] = betaPosCurr
 }
 
 #======   display beta samples   ======
@@ -213,28 +207,28 @@ for (j in 1 : yLevel) {
     bMLK = hi$mids[idx]
     estimate = sprintf("MLK estimation of beta%i%i is %f;", j, k, bMLK)
     print(estimate)
-    #display posterior estimation
-    # trace
-    beta = betaSamplesPosterior[, j, k]
-    traceTitle = sprintf("Trace of beta%i%i for posterior", j, k)
-    fName = paste("output/", traceTitle, ".png", sep="")
-    png(filename = fName)
-    plot(beta, type = "l")
-    title(traceTitle)
-    dev.off()
-    # histogram
-    beta = beta[burnin : nSamples]
-    histTitle = sprintf("Histogram of beta%i%i for posterior", j, k)
-    fName = paste("output/", histTitle, ".png", sep="")
-    png(filename = fName)
-    hi = hist(beta, breaks = 15, freq = FALSE, main = NULL)
-    lines(density(beta))
-    title(histTitle)
-    dev.off()
-    idx = which.is.max(hi$density)
-    bMAP = hi$mids[idx]
-    estimate = sprintf("MAP estimation of beta%i%i is %f;", j, k, bMAP)
-    print(estimate)
+    # #display posterior estimation
+    # # trace
+    # beta = betaSamplesPosterior[, j, k]
+    # traceTitle = sprintf("Trace of beta%i%i for posterior", j, k)
+    # fName = paste("output/", traceTitle, ".png", sep="")
+    # png(filename = fName)
+    # plot(beta, type = "l")
+    # title(traceTitle)
+    # dev.off()
+    # # histogram
+    # beta = beta[burnin : nSamples]
+    # histTitle = sprintf("Histogram of beta%i%i for posterior", j, k)
+    # fName = paste("output/", histTitle, ".png", sep="")
+    # png(filename = fName)
+    # hi = hist(beta, breaks = 15, freq = FALSE, main = NULL)
+    # lines(density(beta))
+    # title(histTitle)
+    # dev.off()
+    # idx = which.is.max(hi$density)
+    # bMAP = hi$mids[idx]
+    # estimate = sprintf("MAP estimation of beta%i%i is %f;", j, k, bMAP)
+    # print(estimate)
   }
 }
 
