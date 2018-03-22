@@ -28,18 +28,15 @@ logLikelihood = function(beta, x, y) {
   L = nrow(beta)
   for (h in 1 : nrow(x)) {
     sumez = 0.0
-    for (j in 1 : L - 1) {
+    for (j in 1 : L) {
       z = sum(beta[j,] * x[h,])
       ez = exp(z)
       sumez = sumez + ez
     }
-    if (y[h] == L) {
-      sp = 1 / (1 + sumez)
-    } else {
       z = sum(beta[y[h],] * x[h,])
       ez = exp(z)
-      sp = ez / (1 + sumez)
-    }
+      sp = ez / sumez
+
     likelihood = likelihood + log(sp)
   }
   return(likelihood)
@@ -103,7 +100,7 @@ if (loadData == "MockData") {
       betaTrue[j, k] = rnorm(1, uPrior[j,k], sigmaPrior)
     }
   }
-  nRecord = 1000
+  nRecord = 100
   x = array(1, dim=c(nRecord, xCols)) 
   y = rep(0, nRecord) 
   for (k in 2 : xCols) {
@@ -112,16 +109,15 @@ if (loadData == "MockData") {
   p = rep(0, yLevel)
   for (h in 1 : nRecord) {
     sumez = 0.0
-    for (j in 1 : yLevel - 1) {
+    for (j in 1 : yLevel) {
       z = sum(betaTrue[j,] * x[h,])
       ez = exp(z)
       sumez = sumez + ez
     }
-    for (j in 1 : yLevel - 1) {
+    for (j in 1 : yLevel) {
       z = sum(betaTrue[j,] * x[h,])
-      p[j] = exp(z) / (1 + sumez)
+      p[j] = exp(z) / sumez
     }
-    p[yLevel] = 1 / (1 + sumez)
     y[h] = which.is.max(p)
   }
   data = cbind(y, x)
@@ -131,7 +127,7 @@ if (loadData == "MockData") {
 }
 
 #======   sampling beta   ======
-nSamples = 5000 # the length of the MCMC samples
+nSamples = 2000 # the length of the MCMC samples
 sigmaProposal = 0.05;
 betaCurr = array(0, dim=c(yLevel, xCols)) 
 betaNew = array(0, dim=c(yLevel, xCols)) 
@@ -209,12 +205,12 @@ for (j in 1 : yLevel) {
     histTitle = sprintf("Histogram of beta%i%i for likelihood", j, k)
     fName = paste("output/", histTitle, ".png", sep="")
     png(filename = fName)
-    h<-hist(beta, breaks = 15, freq = FALSE, main = NULL)
+    hi = hist(beta, breaks = 15, freq = FALSE, main = NULL)
     lines(density(beta))
     title(histTitle)
     dev.off()
-    idx = which.is.max(h$density)
-    bMLK = h$mids[idx]
+    idx = which.is.max(hi$density)
+    bMLK = hi$mids[idx]
     estimate = sprintf("MLK estimation of beta%i%i is %f;", j, k, bMLK)
     print(estimate)
     #display posterior estimation
@@ -231,12 +227,12 @@ for (j in 1 : yLevel) {
     histTitle = sprintf("Histogram of beta%i%i for posterior", j, k)
     fName = paste("output/", histTitle, ".png", sep="")
     png(filename = fName)
-    h = hist(beta, breaks = 15, freq = FALSE, main = NULL)
+    hi = hist(beta, breaks = 15, freq = FALSE, main = NULL)
     lines(density(beta))
     title(histTitle)
     dev.off()
-    idx = which.is.max(h$density)
-    bMAP = h$mids[idx]
+    idx = which.is.max(hi$density)
+    bMAP = hi$mids[idx]
     estimate = sprintf("MAP estimation of beta%i%i is %f;", j, k, bMAP)
     print(estimate)
   }
