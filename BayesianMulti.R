@@ -120,7 +120,7 @@ if (loadData == "MockData") {
 
 #======   sampling beta   ======
 nSamples = 5000 # the length of the MCMC samples
-sigmaProposal = 0.01#0.05;
+sigmaProposal = 0.05#0.05;
 betaCurr = array(0, dim=c(yCols, xCols)) 
 betaNew = array(0, dim=c(yCols, xCols)) 
 betaPosCurr = array(0, dim=c(yCols, xCols)) 
@@ -149,6 +149,7 @@ for (i in 1 : nSamples) {
       logLikelihoodCurr = logLikelihood(betaCurr, x, y)
       logAlpha = logLikelihoodNew - logLikelihoodCurr
       alpha = exp(logAlpha)
+      #print(alpha)
       u = runif(1, min = 0, max = 1);
       if (u < min(1.0, alpha)) {
         betaCurr[j, k] = betaNew[j, k];
