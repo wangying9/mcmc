@@ -7,12 +7,12 @@ rm(list=ls())
 gc()
 
 #======   define functions   ======
-sigmaPrior = 0.01
+sigmaPrior = 0.1
 logPrior = function(beta, uPrior) {
   logp = 0
   for(j in 1 : nrow(uPrior)) {
     for(k in 1 : ncol(uPrior)) {
-      logp = logp + dnorm(beta[j, k], uPrior[j,k], sigmaPrior)
+      logp = logp + log(dnorm(beta[j, k], uPrior[j,k], sigmaPrior))
     }
   }
   return(logp)
@@ -32,7 +32,7 @@ logLikelihood = function(beta, x, y) {
 }
 
 #======   prepare data   ======
-loadData = "MockData" # or "MyData" 
+loadData = "MockData1" # or "MyData" 
 if (loadData == "MockData") {
   dataDF = read.csv(file="mockData.txt",head=TRUE,sep=",")
   colNames = colnames(dataDF)
@@ -78,14 +78,14 @@ if (loadData == "MockData") {
   yCols = 2
   betaTrue = array(0, dim=c(yCols, xCols))
   uPrior = array(0, dim=c(yCols, xCols)) 
-  uPrior[1,1] = 1
-  uPrior[1,2] = 2
-  uPrior[1,3] = 3
-  uPrior[1,4] = 4
-  uPrior[2,1] = 6
-  uPrior[2,2] = 7
-  uPrior[2,3] = 5
-  uPrior[2,4] = 3
+  uPrior[1,1] = 1.0
+  uPrior[1,2] = 2.0
+  uPrior[1,3] = 3.0
+  uPrior[1,4] = 4.0
+  uPrior[2,1] = 0.5
+  uPrior[2,2] = 1.5
+  uPrior[2,3] = 2.5
+  uPrior[2,4] = 3.5
   for (j in 1 : yCols) {
     for (k in 1 : xCols) {
       betaTrue[j, k] = rnorm(1, uPrior[j,k], sigmaPrior)
@@ -120,7 +120,7 @@ if (loadData == "MockData") {
 
 #======   sampling beta   ======
 nSamples = 5000 # the length of the MCMC samples
-sigmaProposal = 0.05;
+sigmaProposal = 0.01#0.05;
 betaCurr = array(0, dim=c(yCols, xCols)) 
 betaNew = array(0, dim=c(yCols, xCols)) 
 betaPosCurr = array(0, dim=c(yCols, xCols)) 
@@ -177,8 +177,8 @@ for (i in 1 : nSamples) {
 #======   display beta samples   ======
 #saveRDS(betaSamplesLikelihood, file="betaSamplesLikelihood.Rds")
 #saveRDS(betaSamplesPosterior, file="betaSamplesPosterior.Rds")
-betaSamplesLikelihood = readRDS("betaSamplesLikelihood.Rds")
-betaSamplesPosterior = readRDS("betaSamplesPosterior.Rds")
+#betaSamplesLikelihood = readRDS("betaSamplesLikelihood.Rds")
+#betaSamplesPosterior = readRDS("betaSamplesPosterior.Rds")
 
 burnin = 500
 for (j in 1 : yCols) {
@@ -232,6 +232,7 @@ for (j in 1 : yCols) {
 
 #overlay prior, likelihood and posterior
 m = nSamples - burnin + 1
+n0 = rnorm(m, 0, sigmaPrior)
 if (loadData != "MyData") {
   for (j in 1 : yCols) {
     for (k in 1 : xCols) {
@@ -243,13 +244,21 @@ if (loadData != "MyData") {
 
       betaPost = betaSamplesPosterior[, j, k]
       betaPost = betaPost[burnin : nSamples]
-      
-      betaPrior = rnorm(m, uPrior, sigmaPrior)
+      betaPrior = n0 + uPrior[j, k]
+
       cond = factor( rep(c("Prior", "Likelihood", "Posterior"), each = m) )
       
-      dataDensity = data.frame(cond, beta = c(betaPrior, betaLk, betaPost))
-      sm.density.compare(dataDensity$beta, dataDensity$cond)
-      legend("topright", levels(dataDensity$cond), fill=2+(0:nlevels(dataDensity$cond)))
+      dataDensity = data.frame(cond, betac = c(betaPrior, betaLk, betaPost))
+      
+      dpr = density(betaPrior)
+      dlk = density(betaLk)
+      dpo = density(betaPost)
+      yAll = c(dpr$y, dlk$y, dpo$y)
+      yMax = max(yAll)
+      plot(dpr$x,dpr$y,type = "l",col="red", xlab = "beta", ylab="density", ylim=c(0, yMax))
+      lines(dlk$x,dlk$y,col="green")
+      lines(dpo$x,dpo$y, col="blue")
+      legend("topright", c("Prior", "Likelihood", "Posterior"), fill=2+(0:nlevels(dataDensity$cond)))
       title(compareTitle)
       dev.off()
 
