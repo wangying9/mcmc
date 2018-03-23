@@ -120,8 +120,8 @@ if (loadData == "MockData") {
 }
 
 #======   sampling beta   ======
-nSamples = 5000 # the length of the MCMC samples
-sigmaProposal = 0.005;
+nSamples = 100000 # the length of the MCMC samples
+sigmaProposal = 0.01;
 betaCurr = array(0, dim=c(yLevel, xCols)) 
 betaNew = array(0, dim=c(yLevel, xCols)) 
 betaPosCurr = array(0, dim=c(yLevel, xCols)) 
