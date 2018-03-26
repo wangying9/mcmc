@@ -43,7 +43,7 @@ logLikelihood = function(beta, x, y) {
 }
 
 #======   prepare data   ======
-loadData = "MockData1" # or "MyData" 
+loadData =  "MyData" 
 if (loadData == "MockData") {
   dataDF = read.csv(file="mockData.txt",head=FALSE,sep=",")
   xCols = 4
@@ -61,18 +61,38 @@ if (loadData == "MockData") {
 } else if (loadData == "MyData") {
   dataDF = read.csv(file="Moz_T.csv",head=TRUE,sep=",")
   yCols = 3
+  yLevel = 2 ^ yCols
   xCols = 6
   nRecord = nrow(dataDF)
-  x = array(1, dim=c(nRecord, xCols)) 
-  y = array(0, dim=c(nRecord, yCols)) 
-  y[,1] = dataDF$Blood.test
-  y[,2] = dataDF$Heard
-  y[,3] = dataDF$H_Comp
-  x[,2] = dataDF$Wealth
-  x[,3] = dataDF$Religion
-  x[,4] = dataDF$Marital.St
-  x[,5] = dataDF$Sup.Soc
-  x[,6] = dataDF$Thin.Risk
+  trainPercent = 0.8
+  nRecordTrain = as.integer(nRecord*trainPercent)
+  nRecordTest = nRecord - nRecordTrain
+  allIdx = 1:nRecord
+  trainIdx = sample(allIdx, nRecordTrain)
+  testIdx = trainIdx * (-1)
+  x = array(1, dim=c(nRecordTrain, xCols)) 
+  y = array(0, dim=c(nRecordTrain, 1)) 
+  y1 = dataDF$Blood.test[trainIdx]
+  y2 = dataDF$Heard[trainIdx]
+  y3 = dataDF$H_Comp[trainIdx]
+  x[,2] = dataDF$Wealth[trainIdx]
+  x[,3] = dataDF$Religion[trainIdx]
+  x[,4] = dataDF$Marital.St[trainIdx]
+  x[,5] = dataDF$Sup.Soc[trainIdx]
+  x[,6] = dataDF$Thin.Risk[trainIdx]
+  y = y1*4 + y2*2 + y3 + 1
+  
+  xTest = array(1, dim=c(nRecordTest, xCols)) 
+  yTest = array(0, dim=c(nRecordTest, 1)) 
+  y1Test = dataDF$Blood.test[testIdx]
+  y2Test = dataDF$Heard[testIdx]
+  y3Test = dataDF$H_Comp[testIdx]
+  xTest[,2] = dataDF$Wealth[testIdx]
+  xTest[,3] = dataDF$Religion[testIdx]
+  xTest[,4] = dataDF$Marital.St[testIdx]
+  xTest[,5] = dataDF$Sup.Soc[testIdx]
+  xTest[,6] = dataDF$Thin.Risk[testIdx]
+  yTest = y1Test*4 + y2Test*2 + y3Test + 1
 } else { #generate new mock data
   xCols = 4
   yCols = 2
