@@ -91,10 +91,10 @@ if (loadData == "MockData") {
   uPrior[3,2] = 2.4
   uPrior[3,3] = 3.4
   uPrior[3,4] = 4.4
-  uPrior[4,1] = 1.6
-  uPrior[4,2] = 2.6
-  uPrior[4,3] = 3.6
-  uPrior[4,4] = 4.6
+  uPrior[4,1] = 0
+  uPrior[4,2] = 0
+  uPrior[4,3] = 0
+  uPrior[4,4] = 0
   for (j in 1 : yLevel) {
     for (k in 1 : xCols) {
       betaTrue[j, k] = rnorm(1, uPrior[j,k], sigmaPrior)
@@ -147,13 +147,6 @@ betaCurr = array(0, dim=c(yLevel, xCols))
 betaNew = array(0, dim=c(yLevel, xCols)) 
 betaPosCurr = array(0, dim=c(yLevel, xCols)) 
 betaPosNew = array(0, dim=c(yLevel, xCols))
-# init = seq(0.5, xCols)/1.0
-# for (j in 1 : yLevel) {
-#   betaCurr[j,] = init
-#   betaNew[j,] = init
-#   betaPosCurr[j,] = init
-#   betaPosNew[j,] = init
-# }
 
 betaSamplesLikelihood = array(0, dim=c(nSamples, yLevel, xCols)) 
 betaSamplesPosterior = array(0, dim=c(nSamples, yLevel, xCols)) 
@@ -176,10 +169,28 @@ for (i in 1 : nSamples) {
     if (u < min(1.0, alpha)) {
       betaCurr[,k] = betaNew[,k]
     }
+    #sample posterior
+    for (j in 1 : yLevel-1) {
+      betaPosNew[j, k] = rnorm(1, betaPosCurr[j, k], sigmaProposal)
+    }
+    betaPosNew[yLevel, k] = betaPosCurr[yLevel, k]
+    if (loadData == "MyData") {
+      priorMean = array(0, dim=c(yCols, xCols)) 
+    } else {
+      priorMean = uPrior
+    }
+    logPosteriorNew = logLikelihood(betaPosNew, x, y) + logPrior(betaPosNew, priorMean)
+    logPosteriorCurr = logLikelihood(betaPosCurr, x, y) + logPrior(betaPosCurr, priorMean)
+    logAlphaPosterior = logPosteriorNew - logPosteriorCurr
+    alphaPosterior = exp(logAlphaPosterior)
+    u = runif(1, min = 0, max = 1);
+    if (u < min(1.0, alphaPosterior)) {
+      betaPosCurr[, k] = betaPosNew[, k];
+    }
   }
-
+  
   betaSamplesLikelihood[i,,] = betaCurr
-#  betaSamplesPosterior[i,,] = betaPosCurr
+  betaSamplesPosterior[i,,] = betaPosCurr
 }
 
 #======   display beta samples   ======
@@ -213,28 +224,28 @@ for (j in 1 : yLevel) {
     bMLK = hi$mids[idx]
     estimate = sprintf("MLK estimation of beta%i%i is %f;", j, k, bMLK)
     print(estimate)
-    # #display posterior estimation
-    # # trace
-    # beta = betaSamplesPosterior[, j, k]
-    # traceTitle = sprintf("Trace of beta%i%i for posterior", j, k)
-    # fName = paste("output/", traceTitle, ".png", sep="")
-    # png(filename = fName)
-    # plot(beta, type = "l")
-    # title(traceTitle)
-    # dev.off()
-    # # histogram
-    # beta = beta[burnin : nSamples]
-    # histTitle = sprintf("Histogram of beta%i%i for posterior", j, k)
-    # fName = paste("output/", histTitle, ".png", sep="")
-    # png(filename = fName)
-    # hi = hist(beta, breaks = 15, freq = FALSE, main = NULL)
-    # lines(density(beta))
-    # title(histTitle)
-    # dev.off()
-    # idx = which.is.max(hi$density)
-    # bMAP = hi$mids[idx]
-    # estimate = sprintf("MAP estimation of beta%i%i is %f;", j, k, bMAP)
-    # print(estimate)
+    #display posterior estimation
+    # trace
+    beta = betaSamplesPosterior[, j, k]
+    traceTitle = sprintf("Trace of beta%i%i for posterior", j, k)
+    fName = paste("output/", traceTitle, ".png", sep="")
+    png(filename = fName)
+    plot(beta, type = "l")
+    title(traceTitle)
+    dev.off()
+    # histogram
+    beta = beta[burnin : nSamples]
+    histTitle = sprintf("Histogram of beta%i%i for posterior", j, k)
+    fName = paste("output/", histTitle, ".png", sep="")
+    png(filename = fName)
+    hi = hist(beta, breaks = 15, freq = FALSE, main = NULL)
+    lines(density(beta))
+    title(histTitle)
+    dev.off()
+    idx = which.is.max(hi$density)
+    bMAP = hi$mids[idx]
+    estimate = sprintf("MAP estimation of beta%i%i is %f;", j, k, bMAP)
+    print(estimate)
   }
 }
 
@@ -261,12 +272,14 @@ if (loadData != "MyData") {
       dpr = density(betaPrior)
       dlk = density(betaLk)
       dpo = density(betaPost)
-      plot(dpr$x,dpr$y,type = "l",col="red")
+      yAll = c(dpr$y, dlk$y, dpo$y)
+      yMax = max(yAll)
+      plot(dpr$x,dpr$y,type = "l",col="red", xlab = "beta", ylab="density", ylim=c(0, yMax))
       #par(new=TRUE)
       lines(dlk$x,dlk$y,col="green")
       #par(new=TRUE)
-      #plot(dpo$x,dpo$y,type = "l",col="blue",add=TRUE)
-      legend("topright", levels(dataDensity$cond), fill=2+(0:nlevels(dataDensity$cond)))
+      lines(dpo$x,dpo$y, col="blue",add=TRUE)
+      legend("topright", c("Prior", "Likelihood", "Posterior"), fill=2+(0:nlevels(dataDensity$cond)))
       title(compareTitle)
       dev.off()
 
