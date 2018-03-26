@@ -12,11 +12,11 @@ library(sm)
 sigmaPrior = 0.1
 logPrior = function(beta, uPrior) {
   logp = 0
-  for(j in 1 : nrow(uPrior)) {
+
     for(k in 1 : ncol(uPrior)) {
-      logp = logp + log(dnorm(beta[j, k], uPrior[j,k], sigmaPrior))
+      logp = logp + log(dnorm(beta[k], uPrior[k], sigmaPrior))
     }
-  }
+  
   return(logp)
 }
 
@@ -24,29 +24,12 @@ logLikelihood = function(beta, x, y) {
   likelihood = 0.0
  
     for (h in 1 : nrow(y)) {
-      z1 = sum(beta[1,] * x[h,])
-      z2 = sum(beta[2,] * x[h,])
-      ezsum = exp(z2) + exp(z1)
-      p1 = exp(z1) / ezsum
-      p2 = exp(z2) / ezsum
-      if(y[h]==1){
-        likelihoodSample = log(p1)
-      } else {
-        likelihoodSample = log(p2)
-      }
-      # bb = beta[1,] - beta[2,] 
-      # zz = sum(bb * x[h,])
-      # pp = exp(zz) / (1.0 + exp(zz))
-      # if(y[h]==1){
-      #   yy = 1
-      # }else {
-      #   yy = 0
-      # }
-      # likelihoodSample1 = log(pp) * yy + log(1.0 - pp) * (1.0 - yy)
-      # sd = likelihoodSample -likelihoodSample1
-      # print(sd)
-      # message(paste('ok made it this far with x=',sd))
-      # show(sd)
+      bb = beta
+      zz = sum(bb * x[h,])
+      pp = exp(zz) / (1.0 + exp(zz))
+        yy = y[h]
+
+      likelihoodSample = log(pp) * yy + log(1.0 - pp) * (1.0 - yy)
       likelihood = likelihood + likelihoodSample
     }
  
@@ -82,22 +65,18 @@ if (loadData == "MockData") {
   uPrior = data.matrix(uDF)
 }  else { #generate new mock data
   xCols = 4
-  yCols = 2
-  betaTrue = array(0, dim=c(yCols, xCols))
-  uPrior = array(0, dim=c(yCols, xCols)) 
-  uPrior[1,1] = 1.0
-  uPrior[1,2] = 2.0
-  uPrior[1,3] = 3.0
-  uPrior[1,4] = 4.0
-  uPrior[2,1] = 0.5
-  uPrior[2,2] = 1.5
-  uPrior[2,3] = 2.5
-  uPrior[2,4] = 3.5
-  for (j in 1 : yCols) {
+  yCols = 1
+  betaTrue = array(0, dim=c(1, xCols))
+  uPrior = array(0, dim=c(1, xCols)) 
+  uPrior[1] = 1.0
+  uPrior[2] = 2.0
+  uPrior[3] = 3.0
+  uPrior[4] = 4.0
+
     for (k in 1 : xCols) {
-      betaTrue[j, k] = uPrior[j,k]#rnorm(1, uPrior[j,k], sigmaPrior)
+      betaTrue[k] = uPrior[k]#rnorm(1, uPrior[k], sigmaPrior)
     }
-  }
+
   nRecord = 1000
   x = array(1, dim=c(nRecord, xCols)) 
   y = array(0, dim=c(nRecord, 1)) 
@@ -105,24 +84,13 @@ if (loadData == "MockData") {
     x[,k] = runif(nRecord, -1, 1)
   }
   for (h in 1 : nRecord) {
-    
-      z1 = sum(betaTrue[1,] * x[h,])
-      z2 = sum(betaTrue[2,] * x[h,])
-      ezsum = exp(z1) + exp(z2) 
-      p1 = exp(z1) / ezsum
-# bb = betaTrue[1,] - betaTrue[2,] 
-# zz = sum(bb * x[h,])
-# p2 = exp(zz)/(1+exp(zz))
-# p3 = (exp(z1)/exp(z2)) /(ezsum/exp(z2))
-# p4 = (exp(z1-z2)) /(1+exp(z1-z2))
-# pd = p1 -p2
-# print(pd)
-      uu = runif(1, min = 0, max = 1)
-      if(uu < p1){
-        y[h] = 1
-      } else {
-        y[h] = 0
-      }
+
+bb = betaTrue
+zz = sum(bb * x[h,])
+p2 = exp(zz)/(1+exp(zz))
+y[h] =rbern(1,p2)
+
+
     
   }
   data = cbind(y, x)
@@ -154,12 +122,10 @@ for (i in 1 : nSamples) {
     print(i)
   }
 
-  
+  for (j in 1 : yCols) {
     for (k in 1 : xCols) {
       #sample liklihood
-      dd = sigmaProposal * rnorm(1, mean = 0, sd = 1)
-      betaNew[1, k] = betaCurr[1, k] + dd
-      betaNew[2, k] = betaCurr[2, k] + dd
+      betaNew[j, k] = betaCurr[j, k] + sigmaProposal * rnorm(1, mean = 0, sd = 1)
       logLikelihoodNew = logLikelihood(betaNew, x, y)
       logLikelihoodCurr = logLikelihood(betaCurr, x, y)
       logAlpha = logLikelihoodNew - logLikelihoodCurr
@@ -170,25 +136,25 @@ for (i in 1 : nSamples) {
         betaCurr[j, k] = betaNew[j, k];
       }
       #sample posterior
-      # betaPosNew[j, k] = betaPosCurr[j, k] + sigmaProposalPost * rnorm(1, mean = 0, sd = 1)
-      # if (loadData == "MyData") {
-      #   priorMean = array(0, dim=c(yCols, xCols)) 
-      # } else {
-      #   priorMean = uPrior
-      # }
-      # logPosteriorNew = logLikelihood(betaPosNew, x, y) + logPrior(betaPosNew, priorMean)
-      # logPosteriorCurr = logLikelihood(betaPosCurr, x, y) + logPrior(betaPosCurr, priorMean)
-      # logAlphaPosterior = logPosteriorNew - logPosteriorCurr
-      # alphaPosterior = exp(logAlphaPosterior)
-      # #print(alphaPosterior)
-      # u = runif(1, min = 0, max = 1);
-      # if (u < min(1.0, alphaPosterior)) {
-      #   betaPosCurr[j, k] = betaPosNew[j, k];
-      # }
+      betaPosNew[j, k] = betaPosCurr[j, k] + sigmaProposalPost * rnorm(1, mean = 0, sd = 1)
+      if (loadData == "MyData") {
+        priorMean = array(0, dim=c(yCols, xCols)) 
+      } else {
+        priorMean = uPrior
+      }
+      logPosteriorNew = logLikelihood(betaPosNew, x, y) + logPrior(betaPosNew, priorMean)
+      logPosteriorCurr = logLikelihood(betaPosCurr, x, y) + logPrior(betaPosCurr, priorMean)
+      logAlphaPosterior = logPosteriorNew - logPosteriorCurr
+      alphaPosterior = exp(logAlphaPosterior)
+      #print(alphaPosterior)
+      u = runif(1, min = 0, max = 1);
+      if (u < min(1.0, alphaPosterior)) {
+        betaPosCurr[j, k] = betaPosNew[j, k];
+      }
     }
-  
+  }
   betaSamplesLikelihood[i,,] = betaCurr
-  #betaSamplesPosterior[i,,] = betaPosCurr
+  betaSamplesPosterior[i,,] = betaPosCurr
 }
 
 #======   display beta samples   ======
@@ -198,13 +164,14 @@ for (i in 1 : nSamples) {
 #betaSamplesPosterior = readRDS("betaSamplesPosterior.Rds")
 
 burnin = 500
+dirName = "output0/"
 for (j in 1 : yCols) {
   for (k in 1 : xCols) {
     #display likelihood estimation
     # trace
     beta = betaSamplesLikelihood[, j, k]
     traceTitle = sprintf("Trace of beta%i%i for likelihood", j, k)
-    fName = paste("output/", traceTitle, ".png", sep="")
+    fName = paste(dirName, traceTitle, ".png", sep="")
     png(filename = fName)
     plot(beta, type = "l")
     title(traceTitle)
@@ -212,7 +179,7 @@ for (j in 1 : yCols) {
     # histogram
     beta = beta[burnin : nSamples]
     histTitle = sprintf("Histogram of beta%i%i for likelihood", j, k)
-    fName = paste("output/", histTitle, ".png", sep="")
+    fName = paste(dirName, histTitle, ".png", sep="")
     png(filename = fName)
     h<-hist(beta, breaks = 15, freq = FALSE, main = NULL)
     lines(density(beta))
@@ -226,7 +193,7 @@ for (j in 1 : yCols) {
     # trace
     beta = betaSamplesPosterior[, j, k]
     traceTitle = sprintf("Trace of beta%i%i for posterior", j, k)
-    fName = paste("output/", traceTitle, ".png", sep="")
+    fName = paste(dirName, traceTitle, ".png", sep="")
     png(filename = fName)
     plot(beta, type = "l")
     title(traceTitle)
@@ -234,7 +201,7 @@ for (j in 1 : yCols) {
     # histogram
     beta = beta[burnin : nSamples]
     histTitle = sprintf("Histogram of beta%i%i for posterior", j, k)
-    fName = paste("output/", histTitle, ".png", sep="")
+    fName = paste(dirName, histTitle, ".png", sep="")
     png(filename = fName)
     h = hist(beta, breaks = 15, freq = FALSE, main = NULL)
     lines(density(beta))
@@ -254,7 +221,7 @@ if (loadData != "MyData") {
   for (j in 1 : yCols) {
     for (k in 1 : xCols) {
       compareTitle = sprintf("Compare of beta%i%i for prior, likelihood and posterior", j, k)
-      fName = paste("output/", compareTitle, ".png", sep="")
+      fName = paste(dirName, compareTitle, ".png", sep="")
       png(filename = fName)
       betaLk = betaSamplesLikelihood[, j, k]
       betaLk = betaLk[burnin : nSamples]
