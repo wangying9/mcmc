@@ -12,14 +12,15 @@ library(sm)
 nSample = 10000
 trainingDF = read.csv(file="trainingData.csv",head=TRUE,sep=",")
 testingDF = read.csv(file="testingData.csv",head=TRUE,sep=",")
+NethvoteDF = read.csv(file="testingData.csv",head=TRUE,sep=",")
 
 
 post2<- MCMCmnl(Y ~
                   X1 + X2 + X3 + X4 + X5,
                 baseline=1, mcmc.method="IndMH", B0=0,
-                verbose=500, mcmc=nSample, thin=1, tune=0.5,
-                data=trainingDF)
-#plot(post2)
+                verbose=500, mcmc=nSample, thin=10, tune=0.5,
+                data=NethvoteDF)
+plot(post2)
 #summary(post2)
 betaSamples = data.matrix(post2)
 burnin = 500
